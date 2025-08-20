@@ -1,0 +1,68 @@
+graph TD
+    A["📊 数据准备"] --> A1["训练数据集<br/>trainingSamples.csv"]
+    A --> A2["测试数据集<br/>testSamples.csv"]
+    A1 --> A3["tf.data CSV数据集"]
+    A2 --> A3
+
+    B["🔧 输入特征定义"] --> B1["数值特征<br/>movieAvgRating<br/>userAvgRating等"]
+    B --> B2["ID特征<br/>movieId, userId<br/>userRatedMovie1-5"]
+    B --> B3["类别特征<br/>userGenre1-5<br/>movieGenre1-3"]
+
+    C["⚙️ 特征工程"] --> C1["用户ID嵌入<br/>30001→10维"]
+    C --> C2["类型嵌入<br/>19个类型→10维"]
+    C --> C3["数值特征<br/>直接使用"]
+
+    D["📋 特征层构建"] --> D1["候选电影层<br/>movieId"]
+    D --> D2["用户行为层<br/>最近5部电影ID"]
+    D --> D3["用户画像层<br/>用户嵌入+统计"]
+    D --> D4["上下文层<br/>电影属性"]
+
+    E["🎯 DIN注意力机制"] --> E1["电影嵌入层<br/>1001×10维"]
+    E1 --> E2["用户历史嵌入<br/>(None,5,10)"]
+    E1 --> E3["候选电影嵌入<br/>(None,10)"]
+
+    E3 --> E4["重复向量<br/>(None,5,10)"]
+    E2 --> E5["激活单元计算"]
+    E4 --> E5
+
+    E5 --> E6["相减操作<br/>Subtract"]
+    E5 --> E7["相乘操作<br/>Multiply"]
+    E6 --> E8["特征拼接<br/>40维向量"]
+    E7 --> E8
+    E2 --> E8
+    E4 --> E8
+
+    E8 --> E9["Dense(32)+PReLU"]
+    E9 --> E10["Dense(1)+Sigmoid<br/>注意力权重"]
+    E10 --> E11["权重重塑<br/>RepeatVector+Permute"]
+    E11 --> E12["加权历史行为<br/>Multiply"]
+    E12 --> E13["Sum Pooling<br/>(None,10)"]
+
+    F["🔗 特征融合"] --> F1["所有特征拼接<br/>用户画像+行为+候选+上下文"]
+    D1 --> F1
+    D3 --> F1
+    E13 --> F1
+    D4 --> F1
+
+    G["🧠 输出层"] --> G1["Dense(128)+PReLU"]
+    F1 --> G1
+    G1 --> G2["Dense(64)+PReLU"]
+    G2 --> G3["Dense(1)+Sigmoid<br/>CTR预测"]
+
+    H["📈 模型训练"] --> H1["损失函数<br/>binary_crossentropy"]
+    H --> H2["优化器<br/>adam"]
+    H --> H3["评估指标<br/>accuracy, ROC-AUC, PR-AUC"]
+    G3 --> H
+
+    H --> I["训练5个epochs"]
+    I --> J["模型评估与预测"]
+
+    classDef dataNode fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef featureNode fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef attentionNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef modelNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+
+    class A,A1,A2,A3 dataNode
+    class B,B1,B2,B3,C,C1,C2,C3,D,D1,D2,D3,D4 featureNode
+    class E,E1,E2,E3,E4,E5,E6,E7,E8,E9,E10,E11,E12,E13 attentionNode
+    class F,F1,G,G1,G2,G3,H,H1,H2,H3,I,J modelNode
